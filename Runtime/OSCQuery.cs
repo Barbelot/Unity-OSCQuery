@@ -85,6 +85,7 @@ namespace OSCQuery
         public FilterMode componentFilterMode = FilterMode.Exclude;
         public List<String> filteredComponentNames;
         public bool excludeInternalUnityParams;
+        public bool showLogs = true;
         String[] internalUnityParamsNames = { "name", "tag", "useGUILayout", "runInEditMode", "enabled", "hideFlags" };
         String[] internalUnityTransformNames = { "localEulerAngles", "right", "up", "forward", "hasChanged", "hierarchyCapacity" };
         String[] acceptedParamTypes = { "System.String", "System.Char", "System.Boolean", "System.Int32", "System.Int64", "System.Int16", "System.UInt16", "System.Byte", "System.SByte", "System.Double", "System.Single", "UnityEngine.Vector2", "UnityEngine.Vector3", "UnityEngine.Quaternion", "UnityEngine.Color" };
@@ -128,8 +129,12 @@ namespace OSCQuery
                 httpServer.OnGet += handleHTTPRequest;
 
                 httpServer.Start();
-                if (httpServer.IsListening) Debug.Log("OSCQuery Server started on port " + localPort);
-                else Debug.LogWarning("OSCQuery could not start on port " + localPort);
+                if (httpServer.IsListening) {
+                    if(showLogs)
+                        Debug.Log("OSCQuery Server started on port " + localPort);
+                } else {
+                    Debug.LogWarning("OSCQuery could not start on port " + localPort);
+                }
 
                 httpServer.AddWebSocketService("/", createWSQuery);
 
@@ -258,13 +263,17 @@ namespace OSCQuery
 
         private void wsMessageReceived(WSQuery query, string message)
         {
-            Debug.Log("Message received " + message);
+            if (showLogs)
+                Debug.Log("Message received " + message);
+
             JSONObject o = new JSONObject(message);
             if (o.IsObject)
             {
                 String command = o["COMMAND"].str;
                 String data = o["DATA"].str;
-                Debug.Log("Received Command " + command + " > " + data);
+
+                if (showLogs)
+                    Debug.Log("Received Command " + command + " > " + data);
 
                 while (propQueryMapLock)
                 {
@@ -288,7 +297,8 @@ namespace OSCQuery
 
         private void wsDataReceived(WSQuery query, byte[] data)
         {
-            Debug.Log("Data received " + data.Length + " bytes");
+            if (showLogs)
+                Debug.Log("Data received " + data.Length + " bytes");
         }
 
         void rebuildDataTree()
@@ -350,7 +360,8 @@ namespace OSCQuery
                 {
                     RangeAttribute rangeAttribute = info.GetCustomAttribute<RangeAttribute>();
 
-                    Debug.Log(go.name+" > Info field type : " +info.FieldType.ToString() +" /" +compType);
+                    if (showLogs)
+                        Debug.Log(go.name+" > Info field type : " +info.FieldType.ToString() +" /" +compType);
 
                     JSONObject io = getPropObject(info.FieldType, info.GetValue(comp), rangeAttribute, info.Name == "mainColor");
 
@@ -641,7 +652,9 @@ namespace OSCQuery
                 string args = "";
                 msg.Data.ForEach((arg) => args += arg.ToString() + ", ");
 
-                Debug.Log("info received : " + msg.Address);
+                if (showLogs)
+                    Debug.Log("info received : " + msg.Address);
+
                 if (compInfoMap.ContainsKey(msg.Address))
                 {
                     CompInfo info = compInfoMap[msg.Address];
@@ -661,7 +674,9 @@ namespace OSCQuery
                         continue;
                     }
 
-                    Debug.Log(info.genericInfo + "/" + info.type);
+                    if (showLogs)
+                        Debug.Log(info.genericInfo + "/" + info.type);
+
                     string typeString = info.type.ToString();
 
                     switch (typeString)
@@ -724,7 +739,9 @@ namespace OSCQuery
                                     if (field.Name.Equals("value__")) continue;
                                     if (field.Name == msg.Data[0].ToString())
                                     {
-                                        Debug.Log("Found enum " + field.Name + " > " + field.GetRawConstantValue());
+                                        if (showLogs)
+                                            Debug.Log("Found enum " + field.Name + " > " + field.GetRawConstantValue());
+
                                         data = field.GetRawConstantValue();
                                     }
                                 }
